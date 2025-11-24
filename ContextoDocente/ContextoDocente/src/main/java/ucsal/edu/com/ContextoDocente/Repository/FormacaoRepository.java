@@ -9,5 +9,5 @@ import java.util.List;
 
 @Repository
 public interface FormacaoRepository extends JpaRepository<Formacao, Long> {
-    List<Formacao> findByProfessor(Professor professor);
+    Formacao findByProfessorId(Long professorId);
 }

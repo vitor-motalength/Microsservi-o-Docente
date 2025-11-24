@@ -3,6 +3,8 @@ package ucsal.edu.com.ContextoDocente.Controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ucsal.edu.com.ContextoDocente.DTO.FormacaoDTO;
+import ucsal.edu.com.ContextoDocente.DTO.ProfessorDTO;
 import ucsal.edu.com.ContextoDocente.Entity.Formacao;
 import ucsal.edu.com.ContextoDocente.Entity.Professor;
 import ucsal.edu.com.ContextoDocente.Service.ProfessorService;
@@ -22,8 +24,8 @@ public class ProfessorController {
     // ------------------ CRUD PROFESSOR ------------------
 
     @PostMapping
-    public ResponseEntity<Professor> criarProfessor(@RequestBody Professor professor) {
-        Professor criado = professorService.criarProfessor(professor);
+    public ResponseEntity<Professor> criarProfessor(@RequestBody ProfessorDTO dto) {
+        Professor criado = professorService.criarProfessor(dto);
         return new ResponseEntity<>(criado, HttpStatus.CREATED);
     }
 
@@ -40,8 +42,8 @@ public class ProfessorController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Professor> atualizarProfessor(@PathVariable Long id,
-                                                        @RequestBody Professor professor) {
-        Professor atualizado = professorService.atualizarProfessor(id, professor);
+                                                        @RequestBody ProfessorDTO dto) {
+        Professor atualizado = professorService.atualizarProfessor(id, dto);
         return ResponseEntity.ok(atualizado);
     }
 
@@ -53,16 +55,23 @@ public class ProfessorController {
 
     // ------------------ FORMACAO ------------------
 
-    @PostMapping("/{professorId}/formacoes")
+    @PostMapping("/{professorId}/formacao")
     public ResponseEntity<Formacao> adicionarFormacao(@PathVariable Long professorId,
-                                                      @RequestBody Formacao formacao) {
-        Formacao criada = professorService.adicionarFormacao(professorId, formacao);
+                                                      @RequestBody FormacaoDTO formacaoDto) {
+        Formacao criada = professorService.adicionarFormacao(professorId, formacaoDto);
         return new ResponseEntity<>(criada, HttpStatus.CREATED);
     }
 
-    @GetMapping("/{professorId}/formacoes")
-    public ResponseEntity<List<Formacao>> listarFormacoes(@PathVariable Long professorId) {
-        List<Formacao> formacoes = professorService.listarFormacoes(professorId);
-        return ResponseEntity.ok(formacoes);
+    @GetMapping("/{professorId}/formacao")
+    public ResponseEntity<Formacao> buscarFormacao(@PathVariable Long professorId) {
+        Formacao formacao = professorService.buscarFormacao(professorId);
+        return ResponseEntity.ok(formacao);
     }
+
+    @PostMapping("/debug")
+    public ResponseEntity<Void> debug(@RequestBody String raw) {
+        System.out.println("RAW BODY: " + raw);
+        return ResponseEntity.ok().build();
+    }
+
 }

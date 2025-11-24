@@ -3,8 +3,12 @@ package ucsal.edu.com.ContextoDocente.Service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import reactor.core.publisher.Mono;
+import ucsal.edu.com.ContextoDocente.DTO.FormacaoDTO;
+import ucsal.edu.com.ContextoDocente.DTO.ProfessorDTO;
 import ucsal.edu.com.ContextoDocente.Entity.Formacao;
 import ucsal.edu.com.ContextoDocente.Entity.Professor;
 
@@ -23,7 +27,7 @@ public class ProfessorService {
     private final WebClient webClient;
 
     // URL FIXA DO MICROSSERVIÇO ESCOLA (Trocar pela sua porta real)
-    private static final String ESCOLA_SERVICE_URL = "http://localhost:8081/escolas";
+    private static final String ESCOLA_SERVICE_URL = "http://localhost:8080/api/escolas";
 
     public ProfessorService(ProfessorRepository professorRepository,
                             FormacaoRepository formacaoRepository) {
@@ -37,17 +41,18 @@ public class ProfessorService {
 
     // ------------------ MÉTODOS PRINCIPAIS ---------------------
 
-    public Professor criarProfessor(Professor professor) {
+    public Professor criarProfessor(ProfessorDTO dto) {
 
         // 1. Validar se a escola existe
-        validarEscola(professor.getEscolaId());
+        validarEscola(dto.escolaId());
 
         // 2. Validar registro único
-        if (professorRepository.existsByRegistro(professor.getRegistro())) {
+        if (professorRepository.existsByRegistro(dto.registro())) {
             throw new RuntimeException("Registro já está cadastrado!");
         }
 
-        return professorRepository.save(professor);
+        Professor novo = new Professor(dto.registro(), dto.nome(), dto.escolaId());
+        return professorRepository.save(novo);
     }
 
     public Professor buscarPorId(Long id) {
@@ -59,17 +64,17 @@ public class ProfessorService {
         return professorRepository.findAll();
     }
 
-    public Professor atualizarProfessor(Long id, Professor novo) {
+    public Professor atualizarProfessor(Long id, ProfessorDTO novo) {
 
         Professor atual = buscarPorId(id);
 
         // Validar escola novamente
-        validarEscola(novo.getEscolaId());
+        validarEscola(novo.escolaId());
 
-        atual.setNome(novo.getNome());
-        atual.setRegistro(novo.getRegistro());
-        atual.setEscolaId(novo.getEscolaId());
-        atual.setAtivo(novo.isAtivo());
+        atual.setNome(novo.nome());
+        atual.setRegistro(novo.registro());
+        atual.setEscolaId(novo.escolaId());
+        atual.setAtivo(novo.ativo());
 
         return professorRepository.save(atual);
     }
@@ -81,27 +86,49 @@ public class ProfessorService {
 
     // ------------------ FORMAÇÕES ---------------------
 
-    public Formacao adicionarFormacao(Long professorId, Formacao formacao) {
-        Professor professor = buscarPorId(professorId);
+    public Formacao adicionarFormacao(Long professorId, FormacaoDTO dto) {
 
-        formacao.setProfessor(professor);
+        try{
+            Professor professor = buscarPorId(professorId);
 
-        return formacaoRepository.save(formacao);
+            if(professor == null) {
+                throw new RuntimeException("Professor informado não existe!");
+            }
+
+            Formacao formacao = new Formacao(dto.categoria(), dto.instituicao(), dto.curso(), dto.anoConclusao(), professor);
+
+            return formacaoRepository.save(formacao);
+        } catch (Exception e){
+            throw new RuntimeException("Erro ao criar Formação no serviço.", e);
+        }
     }
-
-    public List<Formacao> listarFormacoes(Long professorId) {
-        Professor professor = buscarPorId(professorId);
-        return professor.getFormacoes();
+    public Formacao buscarFormacao(Long professorId) {
+        Formacao formacao = formacaoRepository.findByProfessorId(professorId);
+        return formacao;
     }
 
     // ------------------ VALIDAÇÃO DE ESCOLA VIA WEBCLIENT ---------------------
 
+
     private void validarEscola(Long escolaId) {
         try {
             Boolean existe = webClient.get()
-                    .uri("/{id}/existe", escolaId)
-                    .retrieve()
-                    .bodyToMono(Boolean.class)
+                    .uri("/{id}", escolaId)
+                    .exchangeToMono((ClientResponse response) -> {
+                        if (response.statusCode().is2xxSuccessful()) {
+                            // 2xx: escola existe (pode ter corpo com o objeto escola)
+                            return Mono.just(Boolean.TRUE);
+                        } else if (response.statusCode().value() == 404) {
+                            // 404: escola não encontrada
+                            return Mono.just(Boolean.FALSE);
+                        } else {
+                            // outros códigos: tratar como erro
+                            return response.bodyToMono(String.class)
+                                    .defaultIfEmpty(response.statusCode().toString())
+                                    .flatMap(body -> Mono.error(new RuntimeException(
+                                            "Erro ao validar escola. Status: " + response.statusCode() + ", body: " + body)));
+                        }
+                    })
                     .block();
 
             if (existe == null || !existe) {

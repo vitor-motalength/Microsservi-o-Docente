@@ -33,8 +33,8 @@ public class Formacao {
     @Column(name = "ano_conclusao")
     private Integer anoConclusao;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "professor_id")
+    @OneToOne(optional = false)
+    @JoinColumn(name = "id")
     private Professor professor;
 
     public Formacao() {

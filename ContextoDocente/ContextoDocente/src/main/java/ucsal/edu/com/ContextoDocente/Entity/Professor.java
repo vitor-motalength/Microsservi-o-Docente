@@ -26,14 +26,14 @@ public class Professor {
     private Long escolaId;
 
     @Column(nullable = false)
-    private boolean ativo = true;
+    private Boolean ativo = true;
 
     /**
      * Lista de formações (titulações) do professor.
      * Exemplo: "Graduação", "Especialização", "Mestrado", "Doutorado".
      */
-    @OneToMany(mappedBy = "professor", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Formacao> formacoes = new ArrayList<>();
+//    @OneToOne
+//    private Formacao formacao;
 
     public Professor() {}
 
@@ -85,11 +85,11 @@ public class Professor {
         this.ativo = ativo;
     }
 
-    public List<Formacao> getFormacoes() {
-        return formacoes;
-    }
-
-    public void setFormacoes(List<Formacao> formacoes) {
-        this.formacoes = formacoes;
-    }
+//    public Formacao getFormacoes() {
+//        return formacao;
+//    }
+//
+//    public void setFormacoes(Formacao formacoes) {
+//        this.formacao = formacoes;
+//    }
 }
